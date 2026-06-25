@@ -38,9 +38,9 @@ data:
 
 training:
   device: cuda
-  epochs: 20
+  epochs: 30
   batch_size: 4              # lowered from 8 to fit 6GB GPU with 32 frames
-  num_workers: 0
+  num_workers: 2
   optimizer: adamw
   learning_rate: 0.0001
   weight_decay: 0.0001
