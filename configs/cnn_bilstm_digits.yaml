@@ -30,11 +30,11 @@ data:
     enabled: true
     seed: 42
     train:
-      samples_per_class: 100   # 1000 train videos total (was 25)
+      samples_per_class: 200   # 1000 train videos total (was 25)
     val:
-      samples_per_class: 20    # 200 val videos total (was 5)
+      samples_per_class: 40    # 200 val videos total (was 5)
     test:
-      samples_per_class: 20    # 200 test videos total (was 5)
+      samples_per_class: 40    # 200 test videos total (was 5)
 
 training:
   device: cuda
@@ -56,7 +56,7 @@ evaluation:
 
 model:
   name: cnn_bilstm
-  frame_encoder: resnet50
+  frame_encoder: resnet18
   pretrained: true             # ImageNet init — crucial for fast convergence
   freeze_frame_encoder: false
   lstm_hidden_size: 256
