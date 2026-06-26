@@ -62,6 +62,7 @@ def extract_for_split(
     cache_dir: Path,
     num_frames: int,
     image_size: int,
+    extraction_config: dict,
     overwrite: bool,
 ) -> None:
     """Extract landmarks for all videos in one split."""
@@ -92,7 +93,22 @@ def extract_for_split(
             image_size=image_size,
         )  # (T, H, W, 3) uint8 RGB
 
-        landmarks = extract_landmarks_from_frames(frames_rgb)  # (T, 63)
+        landmarks = extract_landmarks_from_frames(
+            frames_rgb,
+            min_hand_detection_confidence=float(
+                extraction_config.get("min_hand_detection_confidence", 0.25)
+            ),
+            min_hand_presence_confidence=float(
+                extraction_config.get("min_hand_presence_confidence", 0.25)
+            ),
+            min_tracking_confidence=float(
+                extraction_config.get("min_tracking_confidence", 0.25)
+            ),
+            use_video_mode=bool(extraction_config.get("use_video_mode", True)),
+            frame_timestamp_step_ms=int(
+                extraction_config.get("frame_timestamp_step_ms", 33)
+            ),
+        )  # (T, 63)
         np.save(cache_file, landmarks)
         processed += 1
 
@@ -110,11 +126,19 @@ def main() -> None:
     num_frames = int(lm_config.get("num_frames", 32))
     image_size = int(lm_config.get("image_size", 224))
     cache_dir = Path(lm_config.get("cache_dir", "landmarks_cache"))
+    extraction_config = dict(lm_config.get("extraction", {}))
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Cache directory : {cache_dir.resolve()}")
     print(f"Frames per video: {num_frames}")
     print(f"Resize to       : {image_size}px")
+    print(
+        "Extraction      : "
+        f"video_mode={bool(extraction_config.get('use_video_mode', True))}, "
+        f"det={float(extraction_config.get('min_hand_detection_confidence', 0.25))}, "
+        f"presence={float(extraction_config.get('min_hand_presence_confidence', 0.25))}, "
+        f"tracking={float(extraction_config.get('min_tracking_confidence', 0.25))}"
+    )
 
     for split in args.splits:
         extract_for_split(
@@ -123,6 +147,7 @@ def main() -> None:
             cache_dir=cache_dir,
             num_frames=num_frames,
             image_size=image_size,
+            extraction_config=extraction_config,
             overwrite=args.overwrite,
         )
 

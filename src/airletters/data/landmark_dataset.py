@@ -50,6 +50,9 @@ class LandmarkDataset(Dataset):
         cache_dir: str | Path,
         label_to_index: Mapping[str, int] | None = None,
         num_frames: int = 32,
+        normalize: bool = True,
+        fill_missing: bool = True,
+        add_velocity: bool = True,
         split: str | None = None,
         subset_config: Mapping[str, Any] | None = None,
         class_filter: str | list[str] | None = None,
@@ -57,6 +60,9 @@ class LandmarkDataset(Dataset):
         self.csv_path = Path(csv_path)
         self.cache_dir = Path(cache_dir)
         self.num_frames = num_frames
+        self.normalize = normalize
+        self.fill_missing = fill_missing
+        self.add_velocity = add_velocity
 
         self.records: pd.DataFrame = pd.read_csv(self.csv_path, skipinitialspace=True)
         missing_cols = set(REQUIRED_COLUMNS) - set(self.records.columns)
@@ -90,6 +96,7 @@ class LandmarkDataset(Dataset):
         lm_config = config["data"].get("landmarks", {})
         cache_dir = Path(lm_config.get("cache_dir", "landmarks_cache"))
         num_frames = int(lm_config.get("num_frames", 32))
+        features_config = lm_config.get("features", {})
 
         # Resolve CSV path using the same helper as AirLettersDataset
         from airletters.config import get_split_csv
@@ -103,6 +110,9 @@ class LandmarkDataset(Dataset):
             cache_dir=cache_dir,
             label_to_index=label_to_index,
             num_frames=num_frames,
+            normalize=bool(features_config.get("normalize", True)),
+            fill_missing=bool(features_config.get("fill_missing", True)),
+            add_velocity=bool(features_config.get("add_velocity", True)),
             split=split,
             subset_config=subset_config,
             class_filter=class_filter,
@@ -130,8 +140,15 @@ class LandmarkDataset(Dataset):
         elif len(landmarks) > self.num_frames:
             landmarks = landmarks[: self.num_frames]
 
+        landmarks = prepare_landmark_features(
+            landmarks=landmarks,
+            normalize=self.normalize,
+            fill_missing=self.fill_missing,
+            add_velocity=self.add_velocity,
+        )
+
         return {
-            "landmarks": torch.from_numpy(landmarks),  # (T, 63)
+            "landmarks": torch.from_numpy(landmarks),  # (T, feature_dim)
             "label": label,
             "label_id": int(self.label_to_index[label]),
             "id": int(row["id"]),
@@ -177,3 +194,99 @@ def create_landmark_dataloaders(
         ),
     }
     return dataloaders, label_to_index
+
+
+def prepare_landmark_features(
+    landmarks: np.ndarray,
+    normalize: bool = True,
+    fill_missing: bool = True,
+    add_velocity: bool = True,
+) -> np.ndarray:
+    """Convert raw cached MediaPipe landmarks into model-ready features."""
+    features = np.asarray(landmarks, dtype=np.float32).copy()
+    if features.ndim != 2 or features.shape[1] != 63:
+        raise ValueError(
+            f"Expected landmark array with shape (T, 63), got {features.shape}"
+        )
+
+    valid_mask = features_valid_mask(features)
+    if fill_missing:
+        features = fill_missing_landmark_frames(features, valid_mask)
+        valid_mask = features_valid_mask(features)
+
+    if normalize:
+        features = normalize_landmarks(features, valid_mask)
+
+    if add_velocity:
+        velocity = np.zeros_like(features, dtype=np.float32)
+        velocity[1:] = features[1:] - features[:-1]
+        if not fill_missing:
+            valid_pairs = valid_mask[1:] & valid_mask[:-1]
+            velocity[1:] *= valid_pairs[:, None]
+        features = np.concatenate([features, velocity], axis=1)
+
+    return features.astype(np.float32, copy=False)
+
+
+def features_valid_mask(landmarks: np.ndarray) -> np.ndarray:
+    """Return ``True`` for frames with a detected hand."""
+    return np.abs(landmarks).sum(axis=1) > 0
+
+
+def fill_missing_landmark_frames(
+    landmarks: np.ndarray,
+    valid_mask: np.ndarray,
+) -> np.ndarray:
+    """Fill zero landmark frames with the nearest valid frame."""
+    if not valid_mask.any():
+        return landmarks
+
+    filled = landmarks.copy()
+    valid_indices = np.flatnonzero(valid_mask)
+    nearest_right_positions = np.searchsorted(valid_indices, np.arange(len(landmarks)))
+
+    for idx in np.flatnonzero(~valid_mask):
+        right_pos = nearest_right_positions[idx]
+        left_pos = right_pos - 1
+
+        left_idx = valid_indices[left_pos] if left_pos >= 0 else None
+        right_idx = (
+            valid_indices[right_pos]
+            if right_pos < len(valid_indices)
+            else None
+        )
+
+        if left_idx is None:
+            fill_idx = right_idx
+        elif right_idx is None:
+            fill_idx = left_idx
+        else:
+            fill_idx = left_idx if idx - left_idx <= right_idx - idx else right_idx
+        filled[idx] = landmarks[int(fill_idx)]
+
+    return filled
+
+
+def normalize_landmarks(
+    landmarks: np.ndarray,
+    valid_mask: np.ndarray,
+    eps: float = 1.0e-6,
+) -> np.ndarray:
+    """Center and scale each sequence while preserving hand trajectory."""
+    if not valid_mask.any():
+        return landmarks
+
+    points = landmarks.reshape(landmarks.shape[0], 21, 3).copy()
+    valid_points = points[valid_mask]
+
+    center = valid_points.reshape(-1, 3).mean(axis=0, keepdims=True)
+    points = points - center.reshape(1, 1, 3)
+
+    valid_centered = points[valid_mask].reshape(-1, 3)
+    scale = np.linalg.norm(valid_centered, axis=1).max()
+    scale = max(float(scale), eps)
+    points = points / scale
+
+    normalized = points.reshape(landmarks.shape).astype(np.float32)
+    normalized[~valid_mask] = 0.0
+    return normalized

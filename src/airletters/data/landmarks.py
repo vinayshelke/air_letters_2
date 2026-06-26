@@ -57,9 +57,11 @@ def _ensure_model() -> str:
 
 def extract_landmarks_from_frames(
     frames_rgb: np.ndarray,
-    min_hand_detection_confidence: float = 0.5,
-    min_hand_presence_confidence: float = 0.5,
-    min_tracking_confidence: float = 0.5,
+    min_hand_detection_confidence: float = 0.25,
+    min_hand_presence_confidence: float = 0.25,
+    min_tracking_confidence: float = 0.25,
+    use_video_mode: bool = True,
+    frame_timestamp_step_ms: int = 33,
 ) -> np.ndarray:
     """Extract hand landmarks from a sequence of RGB frames.
 
@@ -70,6 +72,9 @@ def extract_landmarks_from_frames(
         min_hand_detection_confidence: Minimum confidence for hand detection.
         min_hand_presence_confidence: Minimum confidence for hand presence.
         min_tracking_confidence: Minimum confidence for landmark tracking.
+        use_video_mode: Use MediaPipe's video tracking mode instead of
+            independent image detection for each sampled frame.
+        frame_timestamp_step_ms: Timestamp increment used in video mode.
 
     Returns:
         Float32 array of shape ``(T, 63)``. Frames with no detected hand
@@ -82,7 +87,11 @@ def extract_landmarks_from_frames(
     base_options = mp_python.BaseOptions(model_asset_path=model_path)
     options = mp_vision.HandLandmarkerOptions(
         base_options=base_options,
-        running_mode=mp_vision.RunningMode.IMAGE,  # frame-by-frame (no timestamps)
+        running_mode=(
+            mp_vision.RunningMode.VIDEO
+            if use_video_mode
+            else mp_vision.RunningMode.IMAGE
+        ),
         num_hands=1,
         min_hand_detection_confidence=min_hand_detection_confidence,
         min_hand_presence_confidence=min_hand_presence_confidence,
@@ -92,7 +101,13 @@ def extract_landmarks_from_frames(
     with mp_vision.HandLandmarker.create_from_options(options) as detector:
         for t, frame in enumerate(frames_rgb):
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-            detection_result = detector.detect(mp_image)
+            if use_video_mode:
+                detection_result = detector.detect_for_video(
+                    mp_image,
+                    timestamp_ms=t * frame_timestamp_step_ms,
+                )
+            else:
+                detection_result = detector.detect(mp_image)
 
             if not detection_result.hand_landmarks:
                 continue  # leave zero vector for this frame

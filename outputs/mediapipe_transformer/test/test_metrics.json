@@ -1,5 +1,5 @@
 {
-  "loss": 1.7950390186309815,
-  "accuracy": 0.492,
-  "num_samples": 1000
+  "loss": 1.5778800716400148,
+  "accuracy": 0.637,
+  "num_samples": 2000
 }

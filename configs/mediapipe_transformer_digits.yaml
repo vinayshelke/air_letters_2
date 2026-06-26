@@ -19,19 +19,29 @@ data:
   num_classes: 10
 
   landmarks:
-    num_frames: 32          # must match extraction settings
+    num_frames: 48          # must match extraction settings
     image_size: 224         # frame size used during offline extraction
     cache_dir: landmarks_cache
+    extraction:
+      use_video_mode: true
+      min_hand_detection_confidence: 0.25
+      min_hand_presence_confidence: 0.25
+      min_tracking_confidence: 0.25
+      frame_timestamp_step_ms: 33
+    features:
+      fill_missing: true
+      normalize: true
+      add_velocity: true
 
   subset:
     enabled: true
     seed: 42
     train:
-      samples_per_class: 500   # 1 000 train videos
+      samples_per_class: 1000   # 1 000 train videos
     val:
-      samples_per_class: 100    # 200 val videos
+      samples_per_class: 200    # 200 val videos
     test:
-      samples_per_class: 100    # 200 test videos
+      samples_per_class: 200    # 200 test videos
 
 training:
   device: cuda
@@ -53,10 +63,10 @@ evaluation:
 
 model:
   name: mediapipe_transformer
-  input_dim: 63              # 21 landmarks × (x, y, z)
+  input_dim: 126             # normalized landmarks + frame-to-frame velocity
   d_model: 128
   nhead: 4
   num_layers: 4
   dim_feedforward: 256
   dropout: 0.4
-  max_seq_len: 32            # must be >= landmarks.num_frames
+  max_seq_len: 48            # must be >= landmarks.num_frames
