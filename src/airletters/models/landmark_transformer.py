@@ -91,10 +91,14 @@ class LandmarkTransformer(nn.Module):
         Returns:
             Logit tensor of shape ``(batch, num_classes)``.
         """
-        # Create a boolean key-padding mask: True where the entire frame is
-        # zero (i.e. no hand was detected), so attention ignores those steps.
-        # Shape: (B, T)
         padding_mask: torch.Tensor = (landmarks.abs().sum(dim=-1) == 0)
+
+        # Avoid all-True mask rows which cause NaNs in self-attention
+        all_masked = padding_mask.all(dim=1)
+        if all_masked.any():
+            # Clone to avoid mutating in-place if it has gradients, though it is a boolean mask
+            padding_mask = padding_mask.clone()
+            padding_mask[all_masked, 0] = False
 
         x = self.input_proj(landmarks)     # (B, T, d_model)
         x = self.pos_encoding(x)           # (B, T, d_model)

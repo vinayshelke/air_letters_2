@@ -96,7 +96,7 @@ class AirLettersDataset(Dataset):
         load_video: bool = False,
     ) -> "AirLettersDataset":
         """Create a dataset from the configured official split paths."""
-        video_config = config["data"]["video"]
+        video_config = config["data"].get("video", {})
         subset_config = config["data"].get("subset")
         class_filter = config["data"].get("class_filter")  # e.g. "digits", "letters", or a list
         return cls(
@@ -105,14 +105,14 @@ class AirLettersDataset(Dataset):
             label_to_index=label_to_index,
             validate_files=validate_files,
             load_video=load_video,
-            num_frames=int(video_config["num_frames"]),
-            image_size=int(video_config["image_size"]),
-            resize_short_edge=int(video_config["resize_short_edge"]),
-            mean=list(video_config["mean"]),
-            std=list(video_config["std"]),
+            num_frames=int(video_config.get("num_frames", 16)),
+            image_size=int(video_config.get("image_size", 112)),
+            resize_short_edge=int(video_config.get("resize_short_edge", 128)),
+            mean=list(video_config.get("mean", [0.485, 0.456, 0.406])),
+            std=list(video_config.get("std", [0.229, 0.224, 0.225])),
             split=split,
             subset_config=subset_config,
-            train_crop_scale=list(video_config["train_crop_scale"]),
+            train_crop_scale=list(video_config.get("train_crop_scale", [0.7, 1.0])),
             class_filter=class_filter,
         )
 

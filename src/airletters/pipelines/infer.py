@@ -45,16 +45,16 @@ def main() -> None:
     checkpoint = load_checkpoint(args.checkpoint, model, device)
     index_to_label = {index: label for label, index in checkpoint["label_to_index"].items()}
 
-    video_config = config["data"]["video"]
+    video_config = config["data"].get("video", {})
     video = load_video_frames(
         video_path,
-        num_frames=int(video_config["num_frames"]),
-        image_size=int(video_config["image_size"]),
-        resize_short_edge=int(video_config["resize_short_edge"]),
-        mean=list(video_config["mean"]),
-        std=list(video_config["std"]),
+        num_frames=int(video_config.get("num_frames", 16)),
+        image_size=int(video_config.get("image_size", 112)),
+        resize_short_edge=int(video_config.get("resize_short_edge", 128)),
+        mean=list(video_config.get("mean", [0.485, 0.456, 0.406])),
+        std=list(video_config.get("std", [0.229, 0.224, 0.225])),
         is_training=False,
-        train_crop_scale=list(video_config["train_crop_scale"]),
+        train_crop_scale=list(video_config.get("train_crop_scale", [0.7, 1.0])),
     ).unsqueeze(0)
 
     model.eval()
