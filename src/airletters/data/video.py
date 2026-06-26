@@ -45,6 +45,45 @@ def load_video_frames(
     return (video - mean_tensor) / std_tensor
 
 
+def load_video_frames_raw(
+    video_path: str | Path,
+    num_frames: int,
+    image_size: int,
+) -> np.ndarray:
+    """Load uniformly sampled RGB frames as a raw ``uint8`` numpy array.
+
+    Unlike :func:`load_video_frames`, no normalisation or ImageNet
+    standardisation is applied. The frames are resized to ``image_size ×
+    image_size`` and returned as-is, which is the format expected by MediaPipe.
+
+    Returns:
+        ``uint8`` array of shape ``(num_frames, image_size, image_size, 3)``
+        in RGB channel order.
+    """
+    path = Path(video_path)
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        raise FileNotFoundError(f"Could not open video file: {path}")
+
+    try:
+        total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame_indices = _sample_indices(total_frames, num_frames)
+        frames: list[np.ndarray] = []
+        for frame_index in frame_indices:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, int(frame_index))
+            ok, frame = capture.read()
+            if not ok or frame is None:
+                frame = np.zeros((image_size, image_size, 3), dtype=np.uint8)
+            else:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = cv2.resize(frame, (image_size, image_size), interpolation=cv2.INTER_AREA)
+            frames.append(frame)
+    finally:
+        capture.release()
+
+    return np.stack(frames)  # (T, H, W, 3) uint8
+
+
 def _sample_indices(total_frames: int, num_frames: int) -> np.ndarray:
     if total_frames <= 0:
         return np.zeros(num_frames, dtype=np.int64)

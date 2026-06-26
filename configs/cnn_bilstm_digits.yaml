@@ -1,4 +1,4 @@
-project:11
+project:
   name: airletters-cnn-bilstm-digits
   seed: 42
 

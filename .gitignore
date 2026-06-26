@@ -14,3 +14,7 @@ videos/
 train.csv
 val.csv
 test.csv
+
+# MediaPipe landmark cache and model binary
+landmarks_cache/
+*.task
