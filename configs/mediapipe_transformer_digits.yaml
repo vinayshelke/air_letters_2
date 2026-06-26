@@ -27,15 +27,15 @@ data:
     enabled: true
     seed: 42
     train:
-      samples_per_class: 300   # 1 000 train videos
+      samples_per_class: 500   # 1 000 train videos
     val:
-      samples_per_class: 60    # 200 val videos
+      samples_per_class: 100    # 200 val videos
     test:
-      samples_per_class: 60    # 200 test videos
+      samples_per_class: 100    # 200 test videos
 
 training:
   device: cuda
-  epochs: 30
+  epochs: 50
   batch_size: 32             # no CNN backbone — much larger batches fit easily
   num_workers: 0
   optimizer: adamw
@@ -58,5 +58,5 @@ model:
   nhead: 4
   num_layers: 4
   dim_feedforward: 256
-  dropout: 0.1
+  dropout: 0.4
   max_seq_len: 32            # must be >= landmarks.num_frames
