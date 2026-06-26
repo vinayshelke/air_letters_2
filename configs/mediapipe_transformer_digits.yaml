@@ -27,11 +27,11 @@ data:
     enabled: true
     seed: 42
     train:
-      samples_per_class: 100   # 1 000 train videos
+      samples_per_class: 300   # 1 000 train videos
     val:
-      samples_per_class: 20    # 200 val videos
+      samples_per_class: 60    # 200 val videos
     test:
-      samples_per_class: 20    # 200 test videos
+      samples_per_class: 60    # 200 test videos
 
 training:
   device: cuda

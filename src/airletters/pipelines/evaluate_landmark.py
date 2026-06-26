@@ -42,12 +42,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--checkpoint",
-        default="checkpoints/best.pt",
+        default="checkpoints/mediapipe_transformer/best.pt",
         help="Path to a trained checkpoint.",
     )
     parser.add_argument(
         "--split",
-        default="val",
+        default="test",
         choices=("val", "test"),
         help="Split to evaluate.",
     )
