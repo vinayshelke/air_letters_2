@@ -21,9 +21,17 @@ DIGIT_LABELS: frozenset[str] = frozenset(
 LETTER_LABELS: frozenset[str] = frozenset(
     f"Drawing the letter {c} in the air" for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
+# Special non-gesture classes present in the AirLetters dataset
+SPECIAL_LABELS: frozenset[str] = frozenset(["Doing nothing", "Doing Other Things"])
+
 _FILTER_PRESETS: dict[str, frozenset[str]] = {
     "digits": DIGIT_LABELS,
+    "digits_with_special": DIGIT_LABELS | SPECIAL_LABELS,
     "letters": LETTER_LABELS,
+    # 26 letters + 2 special classes (28 total) — main experiment
+    "letters_with_special": LETTER_LABELS | SPECIAL_LABELS,
+    # Everything in the dataset
+    "all": LETTER_LABELS | DIGIT_LABELS | SPECIAL_LABELS,
 }
 
 
@@ -55,6 +63,7 @@ class AirLettersDataset(Dataset):
         subset_config: Mapping[str, Any] | None = None,
         train_crop_scale: list[float] | None = None,
         class_filter: str | list[str] | None = None,
+        sampling_strategy: str = "uniform",
     ) -> None:
         self.csv_path = Path(csv_path)
         self.videos_dir = Path(videos_dir)
@@ -66,6 +75,7 @@ class AirLettersDataset(Dataset):
         self.std = std or [0.229, 0.224, 0.225]
         self.is_training = split == "train"
         self.train_crop_scale = train_crop_scale or [0.7, 1.0]
+        self.sampling_strategy = sampling_strategy
         self.records = pd.read_csv(self.csv_path, skipinitialspace=True)
         self._validate_columns()
 
@@ -114,6 +124,7 @@ class AirLettersDataset(Dataset):
             subset_config=subset_config,
             train_crop_scale=list(video_config["train_crop_scale"]),
             class_filter=class_filter,
+            sampling_strategy=str(video_config.get("sampling_strategy", "uniform")),
         )
 
     def __len__(self) -> int:
@@ -142,6 +153,7 @@ class AirLettersDataset(Dataset):
                 std=self.std,
                 is_training=self.is_training,
                 train_crop_scale=self.train_crop_scale,
+                sampling_strategy=self.sampling_strategy,
             )
 
         return sample

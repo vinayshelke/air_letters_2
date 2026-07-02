@@ -50,8 +50,10 @@ class CNNBiLSTM(nn.Module):
         features = features.view(batch_size, num_frames, -1)
 
         sequence_output, _ = self.temporal_encoder(features)
-        final_timestep = sequence_output[:, -1, :]
-        return self.classifier(final_timestep)
+        # Mean-pool over all timesteps so the full stroke trajectory is used,
+        # not just the final frame's hidden state.
+        pooled = sequence_output.mean(dim=1)
+        return self.classifier(pooled)
 
 
 def create_model(config: Mapping[str, Any], num_classes: int | None = None) -> CNNBiLSTM:

@@ -21,7 +21,7 @@ from airletters.utils.checkpointing import load_checkpoint
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run CNN+BiLSTM inference on one video")
-    parser.add_argument("--config", default="configs/cnn_bilstm_digits.yaml", help="Path to a YAML config file.")
+    parser.add_argument("--config", default="configs/letters.yaml", help="Path to a YAML config file.")
     parser.add_argument("--checkpoint", default="checkpoints/best.pt", help="Path to a trained checkpoint.")
     parser.add_argument("--video", default="videos/00000000.mp4", help="Path to one AirLetters video.")
     parser.add_argument("--top-k", type=int, default=5, help="Number of predictions to print.")

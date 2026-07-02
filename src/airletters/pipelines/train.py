@@ -26,7 +26,7 @@ from airletters.utils.train_eval import evaluate, train_one_epoch
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train CNN+BiLSTM on AirLetters")
-    parser.add_argument("--config", default="configs/cnn_bilstm_digits.yaml", help="Path to a YAML config file.")
+    parser.add_argument("--config", default="configs/letters.yaml", help="Path to a YAML config file.")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of training epochs.")
     parser.add_argument("--max-train-batches", type=int, default=None, help="Limit train batches for smoke tests.")
     parser.add_argument("--max-val-batches", type=int, default=None, help="Limit validation batches for smoke tests.")
@@ -49,6 +49,15 @@ def main() -> None:
     optimizer = _create_optimizer(model, training_config)
     scaler = torch.amp.GradScaler("cuda", enabled=mixed_precision)
 
+    # Learning rate scheduler — cosine annealing decays LR smoothly to near zero
+    epochs = args.epochs or int(training_config["epochs"])
+    scheduler_name = str(training_config.get("scheduler", "none")).lower()
+    if scheduler_name == "cosine":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+        print(f"Using CosineAnnealingLR scheduler (T_max={epochs})")
+    else:
+        scheduler = None
+
     checkpoints_dir = get_artifact_dir(config, "checkpoints_dir")
     logs_dir = get_artifact_dir(config, "logs_dir")
     outputs_dir = get_artifact_dir(config, "outputs_dir")
@@ -59,7 +68,7 @@ def main() -> None:
     # Clear metrics log at the start of each new run
     metrics_path.write_text("", encoding="utf-8")
 
-    epochs = args.epochs or int(training_config["epochs"])
+    # epochs already computed above for the scheduler
     best_metric_name = str(training_config["save_best_metric"])
     best_metric = float("-inf")
 
@@ -102,11 +111,18 @@ def main() -> None:
             "val_accuracy": val_metrics["accuracy"],
         }
         _append_jsonl(metrics_path, metrics)
+
+        current_lr = optimizer.param_groups[0]["lr"]
         print(
             f"Epoch {epoch:03d}/{epochs} | "
             f"train loss {metrics['train_loss']:.4f} acc {metrics['train_accuracy']:.4f} | "
-            f"val loss {metrics['val_loss']:.4f} acc {metrics['val_accuracy']:.4f}"
+            f"val loss {metrics['val_loss']:.4f} acc {metrics['val_accuracy']:.4f} | "
+            f"lr {current_lr:.2e}"
         )
+
+        # Step the scheduler after each epoch
+        if scheduler is not None:
+            scheduler.step()
 
         save_checkpoint(
             checkpoints_dir / "latest.pt",
