@@ -22,7 +22,7 @@ data:
   num_classes: 28                # 26 letters + 2 specials (Doing nothing & Doing Other Things)
 
   video:
-    num_frames: 32               # Number of frames to sample from each video
+    num_frames: 48               # Number of frames to sample from each video (increased to 48)
     image_size: 224              # Height/width to resize frames to for the CNN
     resize_short_edge: 256       # Resize short edge of frames before cropping
     sampling_strategy: motion    # Sampling method: 'uniform' or 'motion' (motion-based action density)
@@ -34,16 +34,16 @@ data:
     enabled: true                # Enable subset training to reduce memory/compute
     seed: 42
     train:
-      samples_per_class: 200     # Total train samples per class (28 * 200 = 5,600 videos)
+      samples_per_class: 400     # Total train samples per class (28 * 400 = 11,200 videos)
     val:
-      samples_per_class: 40      # Total val samples per class (28 * 40 = 1,120 videos)
+      samples_per_class: 80      # Total val samples per class (28 * 80 = 2,240 videos)
     test:
-      samples_per_class: 40      # Total test samples per class (28 * 40 = 1,120 videos)
+      samples_per_class: 80      # Total test samples per class (28 * 80 = 2,240 videos)
 
 training:
   device: cuda                   # 'cuda' (GPU) or 'cpu'
   epochs: 30                     # Total training epochs
-  batch_size: 6                  # Batch size per step (lowered to fit 6GB GPU)
+  batch_size: 4                  # Batch size per step (lowered to 4 to fit 48 frames on 6GB GPU)
   num_workers: 4                 # Number of data loader CPU worker processes
   optimizer: adamw               # Optimizer: 'adam' or 'adamw'
   learning_rate: 0.0001          # Initial learning rate
@@ -56,7 +56,7 @@ training:
   save_best_metric: val_accuracy # Metric used to save 'best.pt' checkpoint
 
 evaluation:
-  batch_size: 6                  # Evaluation batch size
+  batch_size: 4                  # Evaluation batch size (lowered to 4 to fit 48 frames on 6GB GPU)
   num_workers: 2                 # Data loader worker processes for evaluation
 
 model:
