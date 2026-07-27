@@ -1,161 +1,182 @@
-# AirLetters CNN+BiLSTM Gesture Recognition
+# AirLetters – Real-Time Air-Writing & Gesture Recognition
 
-PyTorch project for Qualcomm AirLetters gesture recognition using a CNN frame
-encoder plus BiLSTM temporal encoder baseline. The initial workflow trains on a
-balanced subset of the official splits, then can be scaled toward the full
-paper-style setting.
+A deep learning pipeline for recognizing hand-written letters and digits drawn
+in the air, built on the
+[Qualcomm AirLetters dataset](https://github.com/quic/aimet-model-zoo).  
+The final model achieves **86.4 % top-1 validation accuracy** across 28 classes
+(A–Z + *Doing Nothing* + *Doing Other Things*) using a ResNet-18 frame encoder
+and a 2-layer Bidirectional LSTM.
 
-The official dataset files remain unchanged at the project root:
+---
 
-- `videos/`
-- `train.csv`
-- `val.csv`
-- `test.csv`
+## Results
 
-## Dataset Summary
+| Branch | Architecture | Frames | Train videos | Classes | Val Accuracy |
+|---|---|---|---|---|---|
+| `mediapipe+t` | MediaPipe landmarks + Transformer | 48 | 13 000 (500 / class) | 26 | ~65 % |
+| `v1` *(this branch)* | ResNet-18 + BiLSTM | 48 | **15 680** (400 / class) | **28** | **86.4 %** |
 
-- Videos: 161,652 `.mp4` files
-- Train split: 128,745 samples
-- Validation split: 16,480 samples
-- Test split: 16,427 samples
-- Classes: 38
-- CSV columns: `id`, `filename`, `label`, `worker_id`, `video_duration`
+---
+
+## Architecture
+
+### Branch: `v1` — ResNet-18 + BiLSTM (Final Model)
+
+```
+Input video
+    │
+    ▼
+Motion-based frame sampling (48 frames)
+    │
+    ▼
+ResNet-18 (ImageNet pre-trained)   ← per-frame spatial encoder
+    │   [batch, 48, 512]
+    ▼
+2-layer Bidirectional LSTM
+    │   [batch, 48, 512]
+    ▼
+Mean Pooling across time steps
+    │   [batch, 512]
+    ▼
+Linear classifier  →  28 classes
+```
+
+**Key design choices:**
+- **Motion-based temporal sampling** – selects the 48 most action-dense frames
+  per video via frame-differencing, discarding idle background frames.
+- **Mean pooling** – aggregates BiLSTM hidden states over the time axis,
+  making the classifier robust to variable gesture speeds.
+- **Two special classes** – *Doing Nothing* and *Doing Other Things* act as
+  natural gesture delimiters in the live demo for word-level spelling.
+
+---
+
+### Branch: `mediapipe+t` — MediaPipe + Transformer (Baseline)
+
+```
+Input video
+    │
+    ▼
+MediaPipe Hands (per-frame landmark extraction)
+    │   21 keypoints × (x, y, z) + joint angles + velocity
+    ▼
+Transformer sequence encoder (48 frames of landmarks)
+    │
+    ▼
+Linear classifier  →  26 classes (A–Z)
+```
+
+- Lightweight: processes hand landmarks instead of raw pixels — no GPU needed
+  for feature extraction.
+- Live demo on this branch used a **2.5-second recording timer** per letter
+  (press key → record → predict).
+- Reached ~65 % validation accuracy on 26 letter classes (500 videos / class).
+
+---
+
+## Dataset
+
+[Qualcomm AirLetters](https://github.com/quic/aimet-model-zoo) – 161 652 MP4
+clips from crowd-sourced workers.
+
+| Split | Total clips | Used in v1 (subset) |
+|---|---|---|
+| Train | 128 745 | 11 200 (400 / class × 28) |
+| Validation | 16 480 | 2 240 (80 / class × 28) |
+| Test | 16 427 | 2 240 (80 / class × 28) |
+
+**Classes (28):** A–Z + *Doing Nothing* + *Doing Other Things*
+
+Place the raw dataset at the project root:
+
+```
+air_letter_2/
+├── videos/          ← all MP4 clips
+├── train.csv
+├── val.csv
+└── test.csv
+```
+
+---
 
 ## Project Structure
 
-```text
+```
 air_letter_2/
-├── checkpoints/
 ├── configs/
-│   └── default.yaml
-│   └── cnn_bilstm_subset.yaml
-├── docs/
-│   └── paper_implementation_notes.md
-├── logs/
-├── outputs/
-├── src/
-│   └── airletters/
-│       ├── config.py
-│       ├── data/
-│       │   ├── dataloaders.py
-│       │   ├── dataset.py
-│       │   └── video.py
-│       ├── models/
-│       │   └── cnn_bilstm.py
-│       ├── pipelines/
-│       │   ├── evaluate.py
-│       │   ├── infer.py
-│       │   └── train.py
-│       └── utils/
-│           ├── checkpointing.py
-│           ├── metrics.py
-│           ├── reproducibility.py
-│           └── train_eval.py
-├── videos/
-├── test.csv
-├── train.csv
-├── val.csv
+│   ├── letters.yaml          ← 28-class config (default)
+│   └── digits.yaml           ← 12-class config (0–9 + specials)
+├── src/airletters/
+│   ├── config.py             ← YAML loading helpers
+│   ├── data/
+│   │   ├── dataset.py        ← CSV loading, class filtering, subset sampling
+│   │   ├── dataloaders.py    ← PyTorch DataLoader factory
+│   │   └── video.py          ← OpenCV decoding, motion sampling, augmentation
+│   ├── models/
+│   │   └── cnn_bilstm.py     ← ResNet-18 + BiLSTM model definition
+│   ├── pipelines/
+│   │   ├── train.py          ← Training loop (supports --resume)
+│   │   ├── evaluate.py       ← Validation / test evaluation + plots
+│   │   ├── infer.py          ← Single-video top-k inference
+│   │   └── live_demo.py      ← Real-time webcam word-spelling demo
+│   └── utils/
+│       ├── checkpointing.py  ← save / load (model + optimizer + scheduler)
+│       ├── plots.py          ← Training curves, confusion matrix, per-class bar
+│       ├── reproducibility.py
+│       └── train_eval.py     ← train_one_epoch / evaluate functions
+├── checkpoints/              ← best.pt  latest.pt (git-ignored)
+├── logs/                     ← metrics.jsonl (git-ignored)
+├── outputs/                  ← PNG plots (git-ignored)
 └── requirements.txt
 ```
 
-## Folder Purpose
+---
 
-- `configs/`: Dataset paths, model settings, and training parameters.
-- `src/airletters/data/`: CSV split loading, OpenCV video decoding, and PyTorch
-  dataloaders.
-- `src/airletters/models/`: CNN+BiLSTM model implementation.
-- `src/airletters/pipelines/`: Train, evaluate, and single-video inference
-  commands.
-- `src/airletters/utils/`: Checkpointing, metrics, seeding, and training loops.
-- `checkpoints/`: Saved `latest.pt` and `best.pt` model checkpoints.
-- `logs/`: Training metrics written as `metrics.jsonl`.
-- `outputs/`: Reserved for predictions, reports, and later experiment outputs.
+## Live Demo — Letter Recognition
 
-## Setup
-
-Run these commands from the project root:
+Run the real-time webcam demo to recognize air-written letters.
 
 ```powershell
-cd C:\Users\shelk\Downloads\air_letter_2
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-$env:PYTHONPATH = "$PWD\src"
+python src/airletters/pipelines/live_demo.py --checkpoint checkpoints/best.pt
 ```
 
-If PyTorch does not detect your NVIDIA GPU, reinstall PyTorch with the CUDA
-command recommended by the official PyTorch install selector.
+**How it works:**
+1. Press any key to start a **2.5-second recording window**.
+2. Draw a letter in the air during the window.
+3. The model predicts the letter and displays it on screen with a confidence score.
+4. Repeat for the next letter.
 
-## Paper-Aligned Starting Point
+| Key | Action |
+|---|---|
+| `Q` | Quit |
 
-The paper reports the following CNN+LSTM baseline settings for ResNet-50 +
-LSTM: 48 frames, 224x224 frame size, ImageNet initialization, random resized
-crop for training, center crop for evaluation, label smoothing `0.1`, Adam,
-learning rate `1e-3`, and batch size `32`.
+---
 
-For this laptop-friendly first implementation, use:
+## Configuration Reference
 
-```text
-configs/cnn_bilstm_subset.yaml
+Both config files are fully commented. Key parameters:
+
+| Parameter | Description |
+|---|---|
+| `class_filter` | `digits_with_special` / `letters_with_special` / `all` |
+| `num_frames` | Frames sampled per video (48) |
+| `sampling_strategy` | `motion` (recommended) or `uniform` |
+| `samples_per_class` | Subset size per class for train / val / test |
+| `scheduler` | `cosine` (CosineAnnealingLR) or `none` |
+| `batch_size` | Reduce if CUDA out-of-memory |
+
+---
+
+## Requirements
+
 ```
-
-It keeps the same baseline direction but starts smaller:
-
-- ResNet-50 + BiLSTM
-- 16 frames
-- 112x112 crops
-- balanced subset: 25 train videos/class, 5 val videos/class, 5 test videos/class
-- Adam, LR `1e-3`, label smoothing `0.1`
-- batch size `2`
-
-More notes from the paper are in `docs/paper_implementation_notes.md`.
-
-## Train on Subset
-
-Start with a tiny smoke run to confirm everything works:
-
-```powershell
-python -m airletters.pipelines.train --config configs/cnn_bilstm_subset.yaml --epochs 1 --max-train-batches 2 --max-val-batches 2
+torch
+torchvision
+opencv-python
+numpy
+pandas
+PyYAML
+tqdm
+scikit-learn
+matplotlib
 ```
-
-Then train the subset:
-
-```powershell
-python -m airletters.pipelines.train --config configs/cnn_bilstm_subset.yaml
-```
-
-Training saves:
-
-- `checkpoints/latest.pt`
-- `checkpoints/best.pt`
-- `logs/metrics.jsonl`
-
-## Evaluate
-
-```powershell
-python -m airletters.pipelines.evaluate --config configs/cnn_bilstm_subset.yaml --checkpoint checkpoints\best.pt --split test --save-plots
-```
-
-Evaluation with `--save-plots` writes:
-
-- `outputs/test/test_metrics.json`
-- `outputs/test/test_confusion_matrix.png`
-- `outputs/test/test_per_class_accuracy.png`
-
-## Inference
-
-```powershell
-python -m airletters.pipelines.infer --config configs/cnn_bilstm_subset.yaml --checkpoint checkpoints\best.pt --video videos\00000000.mp4
-```
-
-## Scaling Up
-
-After the subset run is stable, increase these in `configs/cnn_bilstm_subset.yaml`:
-
-- `data.subset.train.samples_per_class`
-- `data.video.num_frames`, moving toward `32` or `48`
-- `data.video.image_size`, moving toward `224`
-- `data.video.resize_short_edge`, moving toward `300`
-
-The full paper setting is heavy for a 6 GB GPU, so increase one thing at a time.
