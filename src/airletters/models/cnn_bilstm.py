@@ -114,7 +114,22 @@ def _build_frame_encoder(name: str, pretrained: bool) -> tuple[nn.Module, int]:
         model.classifier = nn.Identity()
         return model, feature_dim
 
+    if name == "vgg16":
+        weights = models.VGG16_Weights.DEFAULT if pretrained else None
+        model = models.vgg16(weights=weights)
+        feature_dim = model.classifier[6].in_features  # 4096
+        model.classifier[6] = nn.Identity()            # strip final classification layer
+        return model, feature_dim
+
+    if name == "vgg19":
+        weights = models.VGG19_Weights.DEFAULT if pretrained else None
+        model = models.vgg19(weights=weights)
+        feature_dim = model.classifier[6].in_features  # 4096
+        model.classifier[6] = nn.Identity()            # strip final classification layer
+        return model, feature_dim
+
     raise ValueError(
-        f"Unsupported frame encoder '{name}'. Expected one of: resnet18, resnet50, efficientnet_b0."
+        f"Unsupported frame encoder '{name}'. "
+        f"Expected one of: resnet18, resnet50, efficientnet_b0, vgg16, vgg19."
     )
 
