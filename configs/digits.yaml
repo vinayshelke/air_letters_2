@@ -1,9 +1,9 @@
 # ==============================================================================
-# Configuration for AirLetters VGG16+BiLSTM model - DIGITS & SPECIAL Task (12 Classes)
+# Configuration for AirLetters EfficientNet-B0+BiLSTM model - DIGITS & SPECIAL Task (12 Classes)
 # ==============================================================================
 
 project:
-  name: airletters-vgg16-bilstm-digits-special
+  name: airletters-efficientnetb0-bilstm-digits-special
   seed: 42                       # Random seed for reproducibility
 
 paths:
@@ -22,7 +22,7 @@ data:
   num_classes: 12                # 10 digits + 2 specials (Doing nothing & Doing Other Things)
 
   video:
-    num_frames: 32               # Number of frames to sample from each video (reduced to 32 for VGG16 VRAM budget)
+    num_frames: 32             # Number of frames to sample from each video (48 is safe with EfficientNet-B0)
     image_size: 224              # Height/width to resize frames to for the CNN
     resize_short_edge: 256       # Resize short edge of frames before cropping
     sampling_strategy: motion    # Sampling method: 'uniform' or 'motion' (motion-based action density)
@@ -34,16 +34,16 @@ data:
     enabled: true                # Enable subset training to reduce memory/compute
     seed: 42
     train:
-      samples_per_class: 400     # Total train samples per class (12 * 400 = 4,800 videos)
+      samples_per_class: 200     # Total train samples per class (12 * 400 = 4,800 videos)
     val:
-      samples_per_class: 80      # Total val samples per class (12 * 80 = 960 videos)
+      samples_per_class: 40      # Total val samples per class (12 * 80 = 960 videos)
     test:
-      samples_per_class: 80      # Total test samples per class (12 * 80 = 960 videos)
+      samples_per_class: 40      # Total test samples per class (12 * 80 = 960 videos)
 
 training:
   device: cuda                   # 'cuda' (GPU) or 'cpu'
   epochs: 30                     # Total training epochs
-  batch_size: 4                  # Batch size per step (VGG16 is heavier; keep at 4 with 32 frames on 6GB GPU)
+  batch_size: 4                  # Batch size per step (EfficientNet-B0 is lightweight; 4 is comfortable on 6GB GPU)
   num_workers: 4                 # Number of data loader CPU worker processes
   optimizer: adamw               # Optimizer: 'adam' or 'adamw'
   learning_rate: 0.0001          # Initial learning rate
@@ -56,12 +56,12 @@ training:
   save_best_metric: val_accuracy # Metric used to save 'best.pt' checkpoint
 
 evaluation:
-  batch_size: 4                  # Evaluation batch size (kept at 4 for VGG16 with 32 frames on 6GB GPU)
+  batch_size: 4                  # Evaluation batch size (EfficientNet-B0 with 48 frames fits easily on 6GB GPU)
   num_workers: 2                 # Data loader worker processes for evaluation
 
 model:
   name: cnn_bilstm
-  frame_encoder: vgg16           # CNN backbone for frame feature extraction (VGG16, feature_dim=4096)
+  frame_encoder: efficientnet_b0  # CNN backbone for frame feature extraction (EfficientNet-B0, feature_dim=1280)
   pretrained: true               # Load ImageNet weights for the CNN backbone
   freeze_frame_encoder: false    # Set to true to freeze CNN layers and only train LSTM
   lstm_hidden_size: 256          # Hidden dimension size of LSTM layers

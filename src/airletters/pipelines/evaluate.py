@@ -25,7 +25,7 @@ from airletters.utils.train_eval import evaluate
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate CNN+BiLSTM on AirLetters")
-    parser.add_argument("--config", default="configs/letters.yaml", help="Path to a YAML config file.")
+    parser.add_argument("--config", default="configs/digits.yaml", help="Path to a YAML config file.")
     parser.add_argument("--checkpoint", default="checkpoints/best.pt", help="Path to a trained checkpoint.")
     parser.add_argument("--split", default="val", choices=("val", "test"), help="Split to evaluate.")
     parser.add_argument("--max-batches", type=int, default=None, help="Limit batches for smoke tests.")

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     from airletters.utils.train_eval import evaluate
     from airletters.utils.plots import save_evaluation_plots
 
-    config = load_config('configs/letters.yaml')
+    config = load_config('configs/digits.yaml')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Using device: {device}')
 

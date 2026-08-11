@@ -26,7 +26,7 @@ from airletters.utils.train_eval import evaluate, train_one_epoch
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train CNN+BiLSTM on AirLetters")
-    parser.add_argument("--config", default="configs/letters.yaml", help="Path to a YAML config file.")
+    parser.add_argument("--config", default="configs/digits.yaml", help="Path to a YAML config file.")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of training epochs.")
     parser.add_argument("--resume", default=None, help="Path to a checkpoint to resume training from.")
     parser.add_argument("--max-train-batches", type=int, default=None, help="Limit train batches for smoke tests.")
