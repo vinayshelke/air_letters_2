@@ -1,0 +1,13 @@
+{
+  "overall_accuracy": 0.8479166666666667,
+  "macro_precision": 0.8529278741638103,
+  "macro_recall": 0.8479166666666665,
+  "macro_f1": 0.8483561810138943,
+  "macro_auc": 0.9828929924242426,
+  "micro_precision": 0.8479166666666667,
+  "micro_recall": 0.8479166666666667,
+  "micro_f1": 0.8479166666666667,
+  "micro_auc": 0.9828929924242426,
+  "num_samples": 480,
+  "num_classes": 12
+}

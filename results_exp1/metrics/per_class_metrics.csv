@@ -1,0 +1,13 @@
+Class,Precision,Recall,F1,Accuracy,AUC,Support
+Doing Other Things,0.7400,0.9250,0.8222,0.9250,0.9701,40
+Doing nothing,0.9211,0.8750,0.8974,0.8750,0.9836,40
+Drawing the digit 0 in the air,0.7692,0.7500,0.7595,0.7500,0.9812,40
+Drawing the digit 1 in the air,0.8333,0.8750,0.8537,0.8750,0.9743,40
+Drawing the digit 2 in the air,0.8049,0.8250,0.8148,0.8250,0.9902,40
+Drawing the digit 3 in the air,0.9714,0.8500,0.9067,0.8500,0.9953,40
+Drawing the digit 4 in the air,0.8684,0.8250,0.8462,0.8250,0.9939,40
+Drawing the digit 5 in the air,0.9231,0.9000,0.9114,0.9000,0.9858,40
+Drawing the digit 6 in the air,0.8947,0.8500,0.8718,0.8500,0.9719,40
+Drawing the digit 7 in the air,0.8409,0.9250,0.8810,0.9250,0.9962,40
+Drawing the digit 8 in the air,0.8824,0.7500,0.8108,0.7500,0.9719,40
+Drawing the digit 9 in the air,0.7857,0.8250,0.8049,0.8250,0.9804,40

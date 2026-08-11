@@ -1,0 +1,143 @@
+{
+  "class_metrics": {
+    "macro": {
+      "precision": 0.8529278741638103,
+      "recall": 0.8479166666666665,
+      "f1": 0.8483561810138943
+    },
+    "micro": {
+      "precision": 0.8479166666666667,
+      "recall": 0.8479166666666667,
+      "f1": 0.8479166666666667
+    },
+    "overall_accuracy": 0.8479166666666667
+  },
+  "per_class": {
+    "Doing Other Things": {
+      "precision": 0.74,
+      "recall": 0.925,
+      "f1": 0.8222222222222222,
+      "accuracy": 0.925,
+      "support": 40
+    },
+    "Doing nothing": {
+      "precision": 0.9210526315789473,
+      "recall": 0.875,
+      "f1": 0.8974358974358975,
+      "accuracy": 0.875,
+      "support": 40
+    },
+    "Drawing the digit 0 in the air": {
+      "precision": 0.7692307692307693,
+      "recall": 0.75,
+      "f1": 0.759493670886076,
+      "accuracy": 0.75,
+      "support": 40
+    },
+    "Drawing the digit 1 in the air": {
+      "precision": 0.8333333333333334,
+      "recall": 0.875,
+      "f1": 0.8536585365853658,
+      "accuracy": 0.875,
+      "support": 40
+    },
+    "Drawing the digit 2 in the air": {
+      "precision": 0.8048780487804879,
+      "recall": 0.825,
+      "f1": 0.8148148148148148,
+      "accuracy": 0.825,
+      "support": 40
+    },
+    "Drawing the digit 3 in the air": {
+      "precision": 0.9714285714285714,
+      "recall": 0.85,
+      "f1": 0.9066666666666666,
+      "accuracy": 0.85,
+      "support": 40
+    },
+    "Drawing the digit 4 in the air": {
+      "precision": 0.868421052631579,
+      "recall": 0.825,
+      "f1": 0.8461538461538461,
+      "accuracy": 0.825,
+      "support": 40
+    },
+    "Drawing the digit 5 in the air": {
+      "precision": 0.9230769230769231,
+      "recall": 0.9,
+      "f1": 0.9113924050632911,
+      "accuracy": 0.9,
+      "support": 40
+    },
+    "Drawing the digit 6 in the air": {
+      "precision": 0.8947368421052632,
+      "recall": 0.85,
+      "f1": 0.8717948717948718,
+      "accuracy": 0.85,
+      "support": 40
+    },
+    "Drawing the digit 7 in the air": {
+      "precision": 0.8409090909090909,
+      "recall": 0.925,
+      "f1": 0.8809523809523809,
+      "accuracy": 0.925,
+      "support": 40
+    },
+    "Drawing the digit 8 in the air": {
+      "precision": 0.8823529411764706,
+      "recall": 0.75,
+      "f1": 0.8108108108108109,
+      "accuracy": 0.75,
+      "support": 40
+    },
+    "Drawing the digit 9 in the air": {
+      "precision": 0.7857142857142857,
+      "recall": 0.825,
+      "f1": 0.8048780487804879,
+      "accuracy": 0.825,
+      "support": 40
+    }
+  },
+  "roc": {
+    "per_class": {
+      "Doing Other Things": {
+        "auc": 0.9701136363636363
+      },
+      "Doing nothing": {
+        "auc": 0.9835795454545455
+      },
+      "Drawing the digit 0 in the air": {
+        "auc": 0.9811931818181818
+      },
+      "Drawing the digit 1 in the air": {
+        "auc": 0.9742613636363636
+      },
+      "Drawing the digit 2 in the air": {
+        "auc": 0.9901704545454546
+      },
+      "Drawing the digit 3 in the air": {
+        "auc": 0.995284090909091
+      },
+      "Drawing the digit 4 in the air": {
+        "auc": 0.9939204545454545
+      },
+      "Drawing the digit 5 in the air": {
+        "auc": 0.9857954545454546
+      },
+      "Drawing the digit 6 in the air": {
+        "auc": 0.971875
+      },
+      "Drawing the digit 7 in the air": {
+        "auc": 0.9961931818181818
+      },
+      "Drawing the digit 8 in the air": {
+        "auc": 0.9719318181818182
+      },
+      "Drawing the digit 9 in the air": {
+        "auc": 0.9803977272727272
+      }
+    },
+    "macro_auc": 0.9828929924242426,
+    "micro_auc": 0.9828929924242426
+  }
+}
