@@ -108,13 +108,24 @@ def _save_confusion_matrix(matrix: np.ndarray, labels: list[str], path: Path) ->
 def _save_per_class_accuracy(matrix: np.ndarray, labels: list[str], path: Path) -> None:
     per_class_accuracy = np.diag(matrix)
     fig, ax = plt.subplots(figsize=(14, 5))
-    ax.bar(np.arange(len(labels)), per_class_accuracy)
+    bars = ax.bar(np.arange(len(labels)), per_class_accuracy)
     ax.set_title("Top-1 Accuracy per Class")
     ax.set_xlabel("Class")
     ax.set_ylabel("Accuracy")
-    ax.set_ylim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.12)  # extra headroom for number labels
     ax.set_xticks(np.arange(len(labels)))
-    ax.set_xticklabels(labels, rotation=90, fontsize=8)
+    ax.set_xticklabels(labels, rotation=0, fontsize=8)
+
+    # Add accuracy value numbers above each bar
+    for bar, val in zip(bars, per_class_accuracy):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.02,
+            f"{val:.2f}",
+            ha="center", va="bottom",
+            fontsize=8, fontweight="bold", color="black",
+        )
+
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)

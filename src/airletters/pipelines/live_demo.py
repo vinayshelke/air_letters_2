@@ -24,7 +24,7 @@ from airletters.utils.checkpointing import load_checkpoint
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run live webcam inference")
-    parser.add_argument("--config", default="configs/letters.yaml", help="Path to a YAML config file.")
+    parser.add_argument("--config", default="configs/digits.yaml", help="Path to a YAML config file.")
     parser.add_argument("--checkpoint", default="checkpoints/best.pt", help="Path to a trained checkpoint.")
     parser.add_argument("--duration", type=float, default=2.5, help="Recording duration in seconds.")
     parser.add_argument("--camera", type=int, default=0, help="Camera index.")
@@ -148,7 +148,7 @@ def main() -> None:
                     std=list(video_config["std"]),
                     is_training=False,
                     train_crop_scale=list(video_config["train_crop_scale"]),
-                    sampling_strategy=str(video_config.get("sampling_strategy", "uniform")),
+                    sampling_strategy="uniform",  # always uniform for live inference
                 ).unsqueeze(0).to(device)
 
                 # Inference

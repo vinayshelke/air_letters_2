@@ -1,18 +1,32 @@
+# Virtual environments
 .venv/
+env/
+venv/
+
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
+# MediaPipe & Landmark cache
 landmarks_cache/
 src/airletters/data/hand_landmarker.task
-checkpoints/*
-# logs/*
-# outputs/*
-tmp/
 
+# Model Checkpoints & Large weights
+checkpoints/*
+!checkpoints/.gitkeep
+
+# Temporary / Scratch data
+tmp/
+scratch/
+
+# Dataset files & heavy raw videos
 videos/
 train.csv
 val.csv
 test.csv
+dataset_paper/
+result_exp1
+results_exp2

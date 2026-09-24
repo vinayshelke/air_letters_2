@@ -154,6 +154,7 @@ def main() -> None:
 
     frame_count = 0
     fps_counter = 0
+    current_fps = 0  # initialize before first use to avoid NameError
     fps_timer = time.time()
 
     while True:
@@ -272,6 +273,7 @@ def main() -> None:
                     std=list(video_config["std"]),
                     is_training=False,
                     train_crop_scale=list(video_config["train_crop_scale"]),
+                    sampling_strategy="uniform",  # always uniform for live inference
                 ).unsqueeze(0).to(device)
 
                 # Inference
