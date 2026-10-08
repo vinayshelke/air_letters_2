@@ -53,9 +53,25 @@ def main() -> None:
     # Learning rate scheduler — cosine annealing decays LR smoothly to near zero
     epochs = args.epochs or int(training_config["epochs"])
     scheduler_name = str(training_config.get("scheduler", "none")).lower()
+    warmup_epochs = int(training_config.get("warmup_epochs", 0))
+
     if scheduler_name == "cosine":
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
-        print(f"Using CosineAnnealingLR scheduler (T_max={epochs})")
+        if warmup_epochs > 0:
+            warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+                optimizer, start_factor=0.1, end_factor=1.0, total_iters=warmup_epochs
+            )
+            cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=max(1, epochs - warmup_epochs), eta_min=1e-6
+            )
+            scheduler = torch.optim.lr_scheduler.SequentialLR(
+                optimizer,
+                schedulers=[warmup_scheduler, cosine_scheduler],
+                milestones=[warmup_epochs],
+            )
+            print(f"Using SequentialLR scheduler: LinearLR (warmup={warmup_epochs}) -> CosineAnnealingLR (T_max={epochs - warmup_epochs})")
+        else:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+            print(f"Using CosineAnnealingLR scheduler (T_max={epochs})")
     else:
         scheduler = None
 
@@ -133,12 +149,15 @@ def main() -> None:
         }
         _append_jsonl(metrics_path, metrics)
 
-        current_lr = optimizer.param_groups[0]["lr"]
+        if len(optimizer.param_groups) > 1:
+            lr_str = f"backbone {optimizer.param_groups[0]['lr']:.2e}, head {optimizer.param_groups[1]['lr']:.2e}"
+        else:
+            lr_str = f"{optimizer.param_groups[0]['lr']:.2e}"
         print(
             f"Epoch {epoch:03d}/{epochs} | "
             f"train loss {metrics['train_loss']:.4f} acc {metrics['train_accuracy']:.4f} | "
             f"val loss {metrics['val_loss']:.4f} acc {metrics['val_accuracy']:.4f} | "
-            f"lr {current_lr:.2e}"
+            f"lr {lr_str}"
         )
 
         # Step the scheduler after each epoch
@@ -183,11 +202,28 @@ def _create_optimizer(model: nn.Module, training_config: dict) -> torch.optim.Op
     optimizer_name = str(training_config["optimizer"]).lower()
     learning_rate = float(training_config["learning_rate"])
     weight_decay = float(training_config["weight_decay"])
+    backbone_lr = training_config.get("backbone_learning_rate", None)
+    if backbone_lr is None:
+        backbone_lr = training_config.get("backbone_lr", None)
+
+    # Differential learning rate: if model has frame_encoder and backbone_lr is specified
+    if hasattr(model, "frame_encoder") and backbone_lr is not None:
+        backbone_lr = float(backbone_lr)
+        encoder_params = list(model.frame_encoder.parameters())
+        encoder_param_ids = set(id(p) for p in encoder_params)
+        other_params = [p for p in model.parameters() if id(p) not in encoder_param_ids]
+        param_groups = [
+            {"params": encoder_params, "lr": backbone_lr, "weight_decay": weight_decay},
+            {"params": other_params, "lr": learning_rate, "weight_decay": weight_decay},
+        ]
+        print(f"Differential LR: Backbone lr={backbone_lr:.2e}, Head lr={learning_rate:.2e}")
+    else:
+        param_groups = [{"params": model.parameters(), "lr": learning_rate, "weight_decay": weight_decay}]
 
     if optimizer_name == "adam":
-        return torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        return torch.optim.Adam(param_groups)
     if optimizer_name == "adamw":
-        return torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        return torch.optim.AdamW(param_groups)
 
     raise ValueError(f"Unsupported optimizer: {optimizer_name}")
 

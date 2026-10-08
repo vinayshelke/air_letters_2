@@ -1,0 +1,73 @@
+# ==============================================================================
+# Configuration for AirLetters EfficientNet-B0+Transformer model - DIGITS & SPECIAL Task (12 Classes)
+# ==============================================================================
+
+project:
+  name: airletters-efficientnetb0-transformer-digits-special
+  seed: 42                       # Random seed for reproducibility
+
+paths:
+  dataset_root: .
+  videos_dir: videos
+  train_csv: train.csv
+  val_csv: val.csv
+  test_csv: test.csv
+  checkpoints_dir: checkpoints_transformer
+  logs_dir: logs_transformer
+  outputs_dir: outputs_transformer
+
+data:
+  # Filter the dataset for specific classes (presets: 'digits', 'digits_with_special', 'letters', 'letters_with_special', 'all')
+  class_filter: digits_with_special
+  num_classes: 12                # 10 digits + 2 specials (Doing nothing & Doing Other Things)
+
+  video:
+    num_frames: 48              # Number of frames to sample from each video
+    image_size: 224              # Height/width to resize frames to for the CNN
+    resize_short_edge: 256       # Resize short edge of frames before cropping
+    sampling_strategy: uniform    # Sampling method: 'uniform' or 'motion' (motion-based action density)
+    train_crop_scale: [0.7, 1.0] # Scale range for random spatial cropping during training
+    mean: [0.485, 0.456, 0.406]  # ImageNet normalization mean (RGB)
+    std: [0.229, 0.224, 0.225]   # ImageNet normalization std (RGB)
+
+  subset:
+    enabled: true                # Enable subset training to reduce memory/compute
+    seed: 42
+    train:
+      samples_per_class: 400     # Total train samples per class (12 * 400 = 4,800 videos)
+    val:
+      samples_per_class: 80      # Total val samples per class (12 * 80 = 960 videos)
+    test:
+      samples_per_class: 80      # Total test samples per class (12 * 80 = 960 videos)
+
+training:
+  device: cuda                   # 'cuda' (GPU) or 'cpu'
+  epochs: 30                     # Total training epochs
+  batch_size: 4                 # Batch size per step (EfficientNet-B0 is lightweight; 4 is comfortable on 6GB GPU)
+  num_workers: 4                # Number of data loader CPU worker processes (reduced to 2 to avoid RAM OOM)
+  optimizer: adamw               # Optimizer: 'adam' or 'adamw'
+  learning_rate: 0.00005         # Temporal Transformer head LR (5e-5)
+  backbone_learning_rate: 0.00001 # Pretrained CNN backbone LR (1e-5, 5x lower to protect ImageNet features)
+  weight_decay: 0.0001           # Weight decay regularization
+  label_smoothing: 0.1           # Softens target labels to prevent overconfidence/overfitting
+  mixed_precision: true          # Use FP16 Automatic Mixed Precision (AMP) to save VRAM
+  grad_clip_norm: 5.0            # Max norm value for gradient clipping
+  scheduler: cosine              # LR scheduler: 'cosine' (decays LR smoothly to eta_min) or 'none'
+  warmup_epochs: 0               # No warmup — backbone already pretrained (ImageNet); warmup was making LR 10x too low in early epochs
+  log_every_n_steps: 10          # How often to log training batch metrics
+  save_best_metric: val_accuracy # Metric used to save 'best.pt' checkpoint
+
+evaluation:
+  batch_size: 4                 # Evaluation batch size (EfficientNet-B0 with 48 frames fits easily on 6GB GPU)
+  num_workers: 4                # Data loader worker processes for evaluation (reduced to ease RAM pressure)
+
+model:
+  name: cnn_transformer
+  frame_encoder: efficientnet_b0  # CNN backbone for frame feature extraction (EfficientNet-B0, feature_dim=1280)
+  pretrained: true                # Load ImageNet weights for the CNN backbone
+  freeze_frame_encoder: false     # Set to true to freeze CNN layers and only train Transformer
+  d_model: 256                    # Transformer internal embedding dimension (must be divisible by nhead)
+  nhead: 4                        # Number of attention heads (512 / 8 = 64-d per head)
+  num_layers: 3             # Number of stacked TransformerEncoderLayer blocks
+  dim_feedforward: 1024           # Hidden size of the position-wise feed-forward network inside each block
+  dropout: 0.3                    # Dropout inside Transformer layers and before classifier (lower than LSTM; standard for Transformers)

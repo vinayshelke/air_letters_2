@@ -15,7 +15,10 @@ landmarks_cache/
 src/airletters/data/hand_landmarker.task
 
 # Model Checkpoints & Large weights
-checkpoints/*
+checkpoints/
+checkpoints_*/
+*.pt
+*.pth
 !checkpoints/.gitkeep
 
 # Temporary / Scratch data
