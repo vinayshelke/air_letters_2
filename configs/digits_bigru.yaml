@@ -22,6 +22,8 @@ data:
   num_classes: 12                # 10 digits + 2 specials (Doing nothing & Doing Other Things)
 
   video:
+    cache_dir: frames_cache        # where the JPEGs are stored
+    num_cache_variants: 3          # how many temporal draws were cached
     num_frames: 32               # Number of frames to sample from each video
     image_size: 224              # Height/width to resize frames to for the CNN
     resize_short_edge: 256       # Resize short edge of frames before cropping
@@ -34,17 +36,17 @@ data:
     enabled: true                # Enable subset training to reduce memory/compute
     seed: 42
     train:
-      samples_per_class: 200     # Total train samples per class (12 * 400 = 4,800 videos)
+      samples_per_class: 1000     # Total train samples per class (12 * 400 = 4,800 videos)
     val:
-      samples_per_class: 40      # Total val samples per class (12 * 80 = 960 videos)
+      samples_per_class: 200      # Total val samples per class (12 * 80 = 960 videos)
     test:
-      samples_per_class: 40      # Total test samples per class (12 * 80 = 960 videos)
+      samples_per_class: 200      # Total test samples per class (12 * 80 = 960 videos)
 
 training:
   device: cuda                   # 'cuda' (GPU) or 'cpu'
   epochs: 30                     # Total training epochs
-  batch_size: 4                  # Batch size per step (EfficientNet-B0 is lightweight; 4 is comfortable on 6GB GPU)
-  num_workers: 2                 # Number of data loader CPU worker processes (reduced to 2 to avoid RAM OOM)
+  batch_size: 4                 # Batch size per step (EfficientNet-B0 is lightweight; 4 is comfortable on 6GB GPU)
+  num_workers: 4                 # Number of data loader CPU worker processes (reduced to 2 to avoid RAM OOM)
   optimizer: adamw               # Optimizer: 'adam' or 'adamw'
   learning_rate: 0.0001          # Initial learning rate
   weight_decay: 0.0001           # Weight decay regularization
@@ -56,8 +58,8 @@ training:
   save_best_metric: val_accuracy # Metric used to save 'best.pt' checkpoint
 
 evaluation:
-  batch_size: 4                  # Evaluation batch size (EfficientNet-B0 with 48 frames fits easily on 6GB GPU)
-  num_workers: 1                 # Data loader worker processes for evaluation (reduced to ease RAM pressure)
+  batch_size: 4                # Evaluation batch size (EfficientNet-B0 with 48 frames fits easily on 6GB GPU)
+  num_workers: 4                 # Data loader worker processes for evaluation (reduced to ease RAM pressure)
 
 model:
   name: cnn_bigru

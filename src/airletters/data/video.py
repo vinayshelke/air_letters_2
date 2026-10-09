@@ -19,12 +19,34 @@ def load_video_frames(
     is_training: bool,
     train_crop_scale: list[float],
     sampling_strategy: str = "uniform",
+    cache_dir: str | Path | None = None,
 ) -> torch.Tensor:
-    """Load uniformly sampled RGB frames as a normalized float tensor.
+    """Load RGB frames as a normalized float tensor.
+
+    If ``cache_dir`` is provided and the video's pre-extracted JPEG frames
+    exist there, they are loaded directly (fast path — no video decode).
+    Otherwise, falls back to decoding the raw video file (slow path).
 
     Returns:
         Tensor with shape ``[num_frames, 3, image_size, image_size]``.
     """
+    if cache_dir is not None:
+        frames = _load_from_cache(
+            video_path=Path(video_path),
+            cache_dir=Path(cache_dir),
+            num_frames=num_frames,
+            resize_short_edge=resize_short_edge,
+            is_training=is_training,
+        )
+        if frames is not None:
+            frames = _crop_frames(frames, image_size, is_training, train_crop_scale)
+            video = np.stack(frames).astype(np.float32) / 255.0
+            video = torch.from_numpy(video).permute(0, 3, 1, 2)
+            mean_t = torch.tensor(mean, dtype=torch.float32).view(1, 3, 1, 1)
+            std_t = torch.tensor(std, dtype=torch.float32).view(1, 3, 1, 1)
+            return (video - mean_t) / std_t
+        # Cache miss — fall through to video decode
+
     path = Path(video_path)
     capture = cv2.VideoCapture(str(path))
     if not capture.isOpened():
@@ -49,6 +71,54 @@ def load_video_frames(
     mean_tensor = torch.tensor(mean, dtype=torch.float32).view(1, 3, 1, 1)
     std_tensor = torch.tensor(std, dtype=torch.float32).view(1, 3, 1, 1)
     return (video - mean_tensor) / std_tensor
+
+
+def _load_from_cache(
+    video_path: Path,
+    cache_dir: Path,
+    num_frames: int,
+    resize_short_edge: int,
+    is_training: bool,
+) -> list[np.ndarray] | None:
+    """Load pre-extracted JPEG frames from the cache directory.
+
+    For training, a random variant is selected from the available pre-extracted
+    sets, preserving temporal augmentation without re-decoding the video.
+    Returns ``None`` if the cache entry is missing or incomplete (caller falls
+    back to raw video decoding).
+    """
+    import hashlib
+    path_hash = hashlib.sha1(str(video_path).encode()).hexdigest()[:8]
+    key = f"{video_path.stem}_{path_hash}"
+    video_cache = cache_dir / key
+
+    if not video_cache.exists():
+        return None  # cache miss
+
+    # Discover available variants (v0, v1, v2, ...)
+    variants = sorted(video_cache.glob("v*"))
+    if not variants:
+        return None
+
+    # Pick a random variant during training; always use v0 for val/test
+    variant_dir = np.random.choice(variants) if is_training else variants[0]  # type: ignore[arg-type]
+
+    jpg_files = sorted(variant_dir.glob("f*.jpg"))
+    if len(jpg_files) != num_frames:
+        return None  # incomplete cache entry — fall back to video decode
+
+    frames = []
+    for jpg_path in jpg_files:
+        bgr = cv2.imread(str(jpg_path))
+        if bgr is None:
+            return None
+        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        # Cached frames are already resized to resize_short_edge during extraction;
+        # just return them directly.
+        frames.append(rgb)
+
+    return frames
+
 
 
 def _uniform_sample_indices(total_frames: int, num_frames: int) -> np.ndarray:
