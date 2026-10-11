@@ -154,27 +154,29 @@ def main() -> None:
                 # Inference
                 logits = model(video_tensor)
                 probs = torch.softmax(logits, dim=1).squeeze(0)
-                score, idx = probs.topk(1)
-                
-                prediction = index_to_label[idx.item()]
-                # Simplify verbose labels to short readable forms:
-                #   "Drawing the digit 3 in the air"  -> "3"
-                #   "Drawing the letter A in the air" -> "A"
-                #   "Doing nothing"                   -> "Nothing"
-                #   "Doing Other Things"              -> "Other"
-                prediction = (
-                    prediction
-                    .replace("Drawing the digit ", "")
-                    .replace("Drawing the letter ", "")
-                    .replace(" in the air", "")
-                    .replace("Doing nothing", "Nothing")
-                    .replace("Doing Other Things", "Other")
-                )
-                confidence = score.item() * 100
+                top_scores, top_idxs = probs.topk(min(3, len(index_to_label)))
+
+                def simplify_label(raw: str) -> str:
+                    return (
+                        raw
+                        .replace("Drawing the digit ", "")
+                        .replace("Drawing the letter ", "")
+                        .replace(" in the air", "")
+                        .replace("Doing nothing", "Nothing")
+                        .replace("Doing Other Things", "Other")
+                    )
+
+                prediction = simplify_label(index_to_label[top_idxs[0].item()])
+                confidence = top_scores[0].item() * 100
+                top3 = [
+                    (simplify_label(index_to_label[top_idxs[i].item()]), top_scores[i].item() * 100)
+                    for i in range(top_idxs.size(0))
+                ]
             except Exception as e:
                 print(f"Error during prediction: {e}")
                 prediction = "Error"
                 confidence = 0.0
+                top3 = []
 
             # Delete temp file
             if temp_video_path.exists():
@@ -184,22 +186,33 @@ def main() -> None:
             start_time = time.time()
 
         elif state == "SHOW_RESULT":
-            # Display Prediction
+            # Display top prediction (large)
             cv2.putText(
                 display_frame,
-                f"You drew: {prediction} ({confidence:.1f}%)",
-                (30, 50),
+                f"You drew: {prediction}  ({confidence:.1f}%)",
+                (30, 55),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1.2,
-                (255, 255, 0),
+                (0, 255, 100),
                 3,
             )
+            # Display top-3 alternatives (smaller, below)
+            for rank, (lbl, conf) in enumerate(top3[1:], start=2):
+                cv2.putText(
+                    display_frame,
+                    f"  #{rank}: {lbl}  ({conf:.1f}%)",
+                    (30, 55 + rank * 35),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.75,
+                    (180, 220, 255),
+                    2,
+                )
             cv2.putText(
                 display_frame,
                 "Press SPACEBAR to try again",
-                (30, 90),
+                (30, height - 20),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
+                0.65,
                 (200, 200, 200),
                 1,
             )

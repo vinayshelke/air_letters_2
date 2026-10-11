@@ -64,6 +64,7 @@ class AirLettersDataset(Dataset):
         train_crop_scale: list[float] | None = None,
         class_filter: str | list[str] | None = None,
         sampling_strategy: str = "uniform",
+        cache_dir: str | Path | None = None,
     ) -> None:
         self.csv_path = Path(csv_path)
         self.videos_dir = Path(videos_dir)
@@ -76,6 +77,7 @@ class AirLettersDataset(Dataset):
         self.is_training = split == "train"
         self.train_crop_scale = train_crop_scale or [0.7, 1.0]
         self.sampling_strategy = sampling_strategy
+        self.cache_dir = Path(cache_dir) if cache_dir is not None else None
         self.records = pd.read_csv(self.csv_path, skipinitialspace=True)
         self._validate_columns()
 
@@ -108,7 +110,14 @@ class AirLettersDataset(Dataset):
         """Create a dataset from the configured official split paths."""
         video_config = config["data"]["video"]
         subset_config = config["data"].get("subset")
-        class_filter = config["data"].get("class_filter")  # e.g. "digits", "letters", or a list
+        class_filter = config["data"].get("class_filter")
+
+        # Resolve optional cache_dir relative to dataset_root
+        cache_dir = None
+        if "cache_dir" in video_config:
+            dataset_root = Path(config["paths"]["dataset_root"])
+            cache_dir = dataset_root / str(video_config["cache_dir"])
+
         return cls(
             csv_path=get_split_csv(config, split),
             videos_dir=get_videos_dir(config),
@@ -125,6 +134,7 @@ class AirLettersDataset(Dataset):
             train_crop_scale=list(video_config["train_crop_scale"]),
             class_filter=class_filter,
             sampling_strategy=str(video_config.get("sampling_strategy", "uniform")),
+            cache_dir=cache_dir,
         )
 
     def __len__(self) -> int:
@@ -154,6 +164,7 @@ class AirLettersDataset(Dataset):
                 is_training=self.is_training,
                 train_crop_scale=self.train_crop_scale,
                 sampling_strategy=self.sampling_strategy,
+                cache_dir=self.cache_dir,
             )
 
         return sample
