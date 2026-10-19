@@ -18,22 +18,22 @@ paths:
 
 data:
  
-  class_filter: all
+  class_filter: all              #"letters_with_special",all,"digits_with_special"
   num_classes: 38                 
 
   video:
-    num_frames: 32               # Number of frames to sample from each video (increased to 48)
+    num_frames: 32               # Number of frames to sample from each video
     image_size: 224               # Height/width to resize frames to for the CNN
     resize_short_edge: 256       # Resize short edge of frames before cropping
     sampling_strategy: motion    # Sampling method: 'uniform' or 'motion' (motion-based action density)
     cache_dir: frames_cache      # Pre-extracted JPEG frames directory for fast dataloading
-    num_cache_variants: 3        # Number of motion-sampled temporal draws cached per train video
+    num_cache_variants: 1        # Number of motion-sampled temporal draws cached per train video
     train_crop_scale: [0.7, 1.0] # Scale range for random spatial cropping during training
     mean: [0.485, 0.456, 0.406]  # ImageNet normalization mean (RGB)
     std: [0.229, 0.224, 0.225]   # ImageNet normalization std (RGB)
 
   subset:
-    enabled: true                # Enable subset training to reduce memory/compute
+    enabled: off                # Enable subset training to reduce memory/compute
     seed: 42
     train:
       samples_per_class: 400      
@@ -43,11 +43,11 @@ data:
       samples_per_class: 80       
 training:
   device: cuda                   # 'cuda' (GPU) or 'cpu'
-  epochs: 22                    # Total training epochs
-  batch_size: 4                  # Batch size per step (lowered to 4 to fit 48 frames on 6GB GPU)
-  num_workers: 4                 # Number of data loader CPU worker processes
+  epochs: 25                    # Total training epochs
+  batch_size: 32                  # Batch size per step
+  num_workers: 6                # Number of data loader CPU worker processes (8 of 12 logical threads)
   optimizer: adamw               # Optimizer: 'adam' or 'adamw'
-  learning_rate: 0.0001          # Initial learning rate
+  learning_rate: 0.00025         # LR scaled linearly from 0.0001 @ bs=4 → 0.00025 @ bs=32
   weight_decay: 0.0001           # Weight decay regularization
   label_smoothing: 0.1           # Softens target labels to prevent overconfidence/overfitting
   mixed_precision: true          # Use FP16 Automatic Mixed Precision (AMP) to save VRAM
@@ -57,8 +57,8 @@ training:
   save_best_metric: val_accuracy # Metric used to save 'best.pt' checkpoint
 
 evaluation:
-  batch_size: 4                  # Evaluation batch size (lowered to 4 to fit 48 frames on 6GB GPU)
-  num_workers: 2                 # Data loader worker processes for evaluation
+  batch_size: 32                  # Evaluation batch size
+  num_workers: 6                # Data loader worker processes for evaluation
 
 model:
   name: cnn_bilstm
@@ -67,5 +67,5 @@ model:
   freeze_frame_encoder: false    # Set to true to freeze CNN layers and only train LSTM
   lstm_hidden_size: 256          # Hidden dimension size of LSTM layers
   lstm_num_layers: 2             # Number of stacked BiLSTM layers
-  dropout: 0.5                   # Dropout probability between LSTM layers and classification head
+  dropout: 0.3                   # Dropout probability between LSTM layers and classification head
   bidirectional: true            # Process video sequence in both forward and backward time

@@ -116,7 +116,7 @@ def cache_video(
             # frame is RGB uint8 from _read_frame_at — convert to BGR for cv2 JPEG write
             bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             out_path = variant_dir / f"f{f_idx:03d}.jpg"
-            cv2.imwrite(str(out_path), bgr, [cv2.IMWRITE_JPEG_QUALITY, 92])
+            cv2.imwrite(str(out_path), bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
 
 
 def main() -> None:

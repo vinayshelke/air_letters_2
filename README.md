@@ -132,6 +132,86 @@ air_letter_2/
 
 ---
 
+## Git Sync & Setup
+
+### On Current PC (Pushing Changes)
+```powershell
+git add .
+git commit -m "Configure 38-class full dataset training, evaluation plots, and cache optimizations"
+git push origin resnet38class
+```
+
+### On Other PC (Fetching & Checking Out This Branch)
+If the repository already exists on the other PC but does not have the `resnet38class` branch yet:
+```powershell
+# 1. Fetch all remote branches from GitHub
+git fetch origin
+
+# 2. Switch to the new branch (creates local tracking branch automatically)
+git checkout -b resnet38class origin/resnet38class
+# (Or simply: git switch resnet38class)
+
+# 3. Verify you are on the right branch
+git branch
+```
+
+---
+
+## Quickstart & Commands
+
+Before running any script, make sure `src` is in your Python path:
+```powershell
+$env:PYTHONPATH="src"
+```
+
+### 1. Frame Caching (Pre-Extraction)
+Pre-extracting motion-sampled frames to JPEG eliminates CPU video decompression bottlenecks during training:
+```powershell
+# Cache train, val, and test splits
+$env:PYTHONPATH="src"; python scripts/cache_frames.py --config configs/letters.yaml
+
+# Cache specific splits or override number of temporal variants
+$env:PYTHONPATH="src"; python scripts/cache_frames.py --config configs/letters.yaml --splits train val --num-variants 1
+```
+
+### 2. Training
+```powershell
+# Train from scratch using config
+$env:PYTHONPATH="src"; python src/airletters/pipelines/train.py --config configs/letters.yaml
+
+# Resume training from checkpoint
+$env:PYTHONPATH="src"; python src/airletters/pipelines/train.py --config configs/letters.yaml --resume checkpoints/latest.pt
+```
+
+### 3. Evaluation & Metrics
+```powershell
+# Evaluate model on test set (or val set) and generate metrics/plots
+$env:PYTHONPATH="src"; python src/airletters/pipelines/evaluate.py --config configs/letters.yaml --checkpoint checkpoints/best.pt --split test
+```
+
+### 4. Single-Video Inference
+```powershell
+# Predict air gesture for an individual video file
+$env:PYTHONPATH="src"; python src/airletters/pipelines/infer.py --config configs/letters.yaml --checkpoint checkpoints/best.pt --video path/to/sample.mp4 --top-k 3
+```
+
+### 5. Managing Frame Cache Size (Windows PowerShell)
+```powershell
+# Check current size of frames_cache (in GB)
+(Get-ChildItem -Path frames_cache -Recurse | Measure-Object -Property Length -Sum).Sum / 1GB
+
+# Check number of cached videos
+(Get-ChildItem -Path frames_cache -Directory).Count
+
+# Fast deletion of cache using robocopy mirror trick (avoids slow Windows MFT file-by-file deletion):
+mkdir C:\empty_temp
+robocopy C:\empty_temp frames_cache /MIR /MT:8
+rmdir frames_cache
+rmdir C:\empty_temp
+```
+
+---
+
 ## Live Demo — Letter Recognition
 
 Run the real-time webcam demo to recognize air-written letters.

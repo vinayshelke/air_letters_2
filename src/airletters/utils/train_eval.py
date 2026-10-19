@@ -86,6 +86,7 @@ def evaluate(
     total = 0
     all_targets: list[int] = []
     all_predictions: list[int] = []
+    all_probabilities: list[list[float]] = []
 
     for step, batch in enumerate(tqdm(dataloader, desc=f"evaluate {split_name}", leave=False), start=1):
         if max_batches is not None and step > max_batches:
@@ -103,8 +104,10 @@ def evaluate(
         correct += batch_correct
         total += batch_total
         if collect_predictions:
+            probs = torch.softmax(logits, dim=1)
             all_targets.extend(targets.cpu().tolist())
             all_predictions.extend(predictions.cpu().tolist())
+            all_probabilities.extend(probs.cpu().tolist())
 
     metrics: dict[str, Any] = {
         "loss": running_loss / total,
@@ -114,4 +117,5 @@ def evaluate(
     if collect_predictions:
         metrics["targets"] = all_targets
         metrics["predictions"] = all_predictions
+        metrics["probabilities"] = all_probabilities
     return metrics

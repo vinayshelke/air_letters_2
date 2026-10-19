@@ -71,26 +71,40 @@ def main() -> None:
     if args.save_plots:
         outputs_dir = get_artifact_dir(config, "outputs_dir") / args.split
         index_to_label = {index: label for label, index in checkpoint["label_to_index"].items()}
-        save_evaluation_plots(
+        detailed_report = save_evaluation_plots(
             targets=metrics["targets"],
             predictions=metrics["predictions"],
             index_to_label=index_to_label,
             output_dir=outputs_dir,
             split_name=args.split,
+            probabilities=metrics.get("probabilities"),
         )
+        
+        # Combine overall and detailed test metrics
+        full_metrics = {
+            "split": args.split,
+            "loss": metrics["loss"],
+            "top1_accuracy": metrics["accuracy"],
+            "num_samples": metrics["num_samples"],
+            "macro_avg": detailed_report.get("macro_avg", {}),
+            "weighted_avg": detailed_report.get("weighted_avg", {}),
+            "roc_auc": detailed_report.get("roc_auc", {}),
+            "per_class": detailed_report.get("per_class", {}),
+        }
+        
         metrics_path = outputs_dir / f"{args.split}_metrics.json"
-        metrics_path.write_text(
-            json.dumps(
-                {
-                    "loss": metrics["loss"],
-                    "accuracy": metrics["accuracy"],
-                    "num_samples": metrics["num_samples"],
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-        print(f"Saved evaluation outputs to: {outputs_dir}")
+        metrics_path.write_text(json.dumps(full_metrics, indent=2), encoding="utf-8")
+        
+        print("\n" + "=" * 50)
+        print(f"Detailed Summary for {args.split.upper()} Set:")
+        print(f"  Accuracy:      {metrics['accuracy'] * 100:.2f}%")
+        print(f"  Macro Prec:    {detailed_report.get('macro_avg', {}).get('precision', 0) * 100:.2f}%")
+        print(f"  Macro Recall:  {detailed_report.get('macro_avg', {}).get('recall', 0) * 100:.2f}%")
+        print(f"  Macro F1:      {detailed_report.get('macro_avg', {}).get('f1_score', 0) * 100:.2f}%")
+        if "roc_auc" in detailed_report:
+            print(f"  Macro ROC AUC: {detailed_report['roc_auc'].get('macro_roc_auc', 0):.4f}")
+        print(f"Saved evaluation outputs & metrics to: {outputs_dir}")
+        print("=" * 50)
 
 
 if __name__ == "__main__":
